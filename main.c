@@ -1,8 +1,13 @@
 #include <stdio.h>
+#include <stdlib.h>
 #include <fcntl.h>
 #include <unistd.h>
 #include <sys/ioctl.h>
 #include <linux/fs.h>
+#include <sys/mount.h>
+#include <sys/stat.h>
+#include <errno.h>
+
 
 #define SET_COLOR_RED     "\x1b[31m"
 #define SET_COLOR_GREEN   "\x1b[32m" 
@@ -11,10 +16,16 @@
 
 int main (void)
 {
-	const char* dirName = "usb-backup";
+	const char* mntPoint  = "/mnt/usb-backup";
+	const char* base      = "/dev/"; 
 
-	const char* base = "/dev/"; 
-	char partitionLocation[20]; // currently unknown 
+	char  partitionLocation[20]; // currently unknown 
+	
+	printf("\n");
+	if   (  system("sudo lsblk -f") != 0 )
+	{	
+		perror (SET_COLOR_YELLOW "\nlsblk -f\n" SET_COLOR_RESET); 
+	} 
  
 	printf ("\nPartition to mount (e.g., sdb1): "   );
 
@@ -49,17 +60,34 @@ int main (void)
 	printf ("- Size     :  %li (%.2fgb)\n\n" , size, size/1073741824.0  );               		
 	
 	printf (SET_COLOR_YELLOW "WARNING - CHOOSING THE WRONG PARTITION MAY CAUSE PROBLEMS" SET_COLOR_RESET); 
-	printf ("\nAre you sure you want to continue (y/n)? "); 
+	printf ("\n%s will be mounted on %s", partitionName, mntPoint				            ); 
+	printf ("\nAre you sure you want to continue (y/n)? "						    ); 
 	
 	char userAnswer = getchar(); 
-	
 	if      ( userAnswer != 'y' && userAnswer != 'Y' ) 
 	{
 		printf ("... Operation aborted\n"); 
 		close  (fd);
 		return 0;
 	} 
+	
+	//      make directory	
+	if      ( mkdir (mntPoint, 0755) == -1   &&   errno != EEXIST         )
+	{
+		perror  ("mkdir failed");
+		close   (fd);
+		return  -1;
+	}
 
+	//      mount partition to directory
+	if      ( mount (partitionLocation, mntPoint, "vfat", 0, NULL) == -1  )
+	{	
+		perror  ("mount failed");
+		close   (fd); 
+		return  -1;
+	}
+ 	
+	
 	close(fd); 
 	return 0;
 }
