@@ -7,7 +7,7 @@
 #include <sys/mount.h>
 #include <sys/stat.h>
 #include <errno.h>
-
+#include <pwd.h>
 
 #define SET_COLOR_RED     "\x1b[31m"
 #define SET_COLOR_GREEN   "\x1b[32m" 
@@ -71,7 +71,6 @@ int main (void)
 		return 0;
 	} 
 	
-	//      make directory	
 	if      ( mkdir (mntPoint, 0755) == -1   &&   errno != EEXIST         )
 	{
 		perror  ("mkdir failed");
@@ -79,15 +78,32 @@ int main (void)
 		return  -1;
 	}
 
-	//      mount partition to directory
+
 	if      ( mount (partitionLocation, mntPoint, "vfat", 0, NULL) == -1  )
 	{	
 		perror  ("mount failed");
 		close   (fd); 
 		return  -1;
 	}
- 	
 	
+
+	if      ( umount (mntPoint)   == -1 ) 
+	{	
+		perror("Unmount failed");
+	}	
+	
+	uid_t real_uid = getuid(); 
+	int useridint  = getuid(); 
+	
+	struct passwd *pw = getpwuid(real_uid);
+	printf("uid_t: %li.  int: %li\n", real_uid, useridint) ; 
+
+	        printf("Username: %s\n", pw->pw_name);
+        printf("User ID (UID): %d\n", pw->pw_uid);
+        printf("Home Directory: %s\n", pw->pw_dir);
+        printf("Default Shell: %s\n", pw->pw_shell);
+
+
 	close(fd); 
 	return 0;
 }
